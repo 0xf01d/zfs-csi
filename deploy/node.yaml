@@ -1,0 +1,121 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: zfs-csi-node
+  namespace: zfs-csi
+  labels:
+    app.kubernetes.io/name: zfs-csi
+    app.kubernetes.io/component: node
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: zfs-csi
+      app.kubernetes.io/component: node
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 10%
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: zfs-csi
+        app.kubernetes.io/component: node
+    spec:
+      serviceAccountName: zfs-csi-node
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      priorityClassName: system-node-critical
+      tolerations:
+        - operator: Exists
+      containers:
+        - name: node-driver-registrar
+          image: registry.k8s.io/sig-storage/csi-node-driver-registrar:v2.13.0
+          args:
+            - --csi-address=/csi/csi.sock
+            - --kubelet-registration-path=/var/lib/kubelet/plugins/zfs-csi.0xf01d.github.io/csi.sock
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /csi
+            - name: registration-dir
+              mountPath: /registration
+        - name: liveness-probe
+          image: registry.k8s.io/sig-storage/livenessprobe:v2.15.0
+          args:
+            - --csi-address=/csi/csi.sock
+            - --health-port=9808
+          ports:
+            - name: healthz
+              containerPort: 9808
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: healthz
+            initialDelaySeconds: 10
+            timeoutSeconds: 3
+            periodSeconds: 10
+            failureThreshold: 3
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /csi
+        - name: zfs-csi
+          image: ghcr.io/0xf01d/zfs-csi:latest
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            privileged: true
+          args:
+            - --mode=node
+            - --endpoint=unix:///csi/csi.sock
+            - --node-id=$(NODE_NAME)
+            - --pool=tank/k8s
+            - --peer-listen=:9809
+            - --peer-port=9809
+            - --peer-discovery=true
+            - --replicate-interval=0
+            - --keep-snapshots=10
+          env:
+            - name: NODE_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: spec.nodeName
+          ports:
+            - name: peer
+              containerPort: 9809
+              protocol: TCP
+          volumeMounts:
+            - name: socket-dir
+              mountPath: /csi
+            - name: kubelet-dir
+              mountPath: /var/lib/kubelet
+              mountPropagation: Bidirectional
+            - name: plugin-dir
+              mountPath: /var/lib/kubelet/plugins/zfs-csi.0xf01d.github.io
+              mountPropagation: Bidirectional
+            - name: dev-zfs
+              mountPath: /dev/zfs
+            - name: udev
+              mountPath: /run/udev
+      volumes:
+        - name: socket-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins/zfs-csi.0xf01d.github.io
+            type: DirectoryOrCreate
+        - name: registration-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins_registry
+            type: Directory
+        - name: kubelet-dir
+          hostPath:
+            path: /var/lib/kubelet
+            type: Directory
+        - name: plugin-dir
+          hostPath:
+            path: /var/lib/kubelet/plugins/zfs-csi.0xf01d.github.io
+            type: DirectoryOrCreate
+        - name: dev-zfs
+          hostPath:
+            path: /dev/zfs
+            type: CharDevice
+        - name: udev
+          hostPath:
+            path: /run/udev
+            type: DirectoryOrCreate

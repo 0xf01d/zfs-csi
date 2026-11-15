@@ -1,0 +1,10 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: zfs-csi
+provisioner: zfs-csi.0xf01d.github.io
+reclaimPolicy: Delete
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
+# The pool is a driver argument (--pool), not a StorageClass parameter:
+# one driver instance owns exactly one pool.

@@ -1,0 +1,6 @@
+apiVersion: snapshot.storage.k8s.io/v1
+kind: VolumeSnapshotClass
+metadata:
+  name: zfs-csi
+driver: zfs-csi.0xf01d.github.io
+deletionPolicy: Delete

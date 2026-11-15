@@ -1,0 +1,12 @@
+apiVersion: storage.k8s.io/v1
+kind: CSIDriver
+metadata:
+  name: zfs-csi.0xf01d.github.io
+spec:
+  attachRequired: true
+  podInfoOnMount: false
+  fsGroupPolicy: None
+  volumeLifecycleModes:
+    - Persistent
+  # The pool's free space is not exposed through CSI GetCapacity.
+  storageCapacity: false
