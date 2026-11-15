@@ -280,6 +280,10 @@ func (s *Server) send(w http.ResponseWriter, r *http.Request) {
 	if from != "" && !strings.Contains(from, "@") {
 		from = naming.Snapshot(naming.Dataset(s.cfg.Pool, volume), from)
 	}
+	if !s.ownSnapshot(to) || (from != "" && !s.ownSnapshot(from)) {
+		http.Error(w, "snapshot is outside this driver's pool", http.StatusBadRequest)
+		return
+	}
 	w.Header().Set("Content-Type", "application/octet-stream")
 	w.WriteHeader(http.StatusOK)
 	if f, ok := w.(http.Flusher); ok {
@@ -403,12 +407,26 @@ func (s *Server) clone(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "sourceSnapshot is required", http.StatusBadRequest)
 		return
 	}
+	if !s.ownSnapshot(req.SourceSnapshot) {
+		http.Error(w, "source snapshot is outside this driver's pool", http.StatusBadRequest)
+		return
+	}
 	target := naming.Dataset(s.cfg.Pool, req.Volume)
 	if err := s.cfg.Backend.Clone(req.SourceSnapshot, target); err != nil {
 		writeBackendError(w, err)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]bool{"cloned": true})
+}
+
+// ownSnapshot keeps the peer API inside the pool this driver owns.
+func (s *Server) ownSnapshot(full string) bool {
+	i := strings.LastIndex(full, "@")
+	if i <= 0 || i == len(full)-1 {
+		return false
+	}
+	ds := full[:i]
+	return strings.HasPrefix(ds, strings.TrimSuffix(s.cfg.Pool, "/")+"/")
 }
 
 func (s *Server) expand(w http.ResponseWriter, r *http.Request) {
