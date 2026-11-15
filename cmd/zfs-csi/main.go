@@ -57,7 +57,7 @@ func (p *peerFlags) Set(v string) error {
 func main() {
 	var (
 		endpoint      = flag.String("endpoint", "unix:///csi/csi.sock", "CSI endpoint")
-		mode          = flag.String("mode", "", "controller or node")
+		mode          = flag.String("mode", "", "controller, node, or all (combined, useful for csi-sanity)")
 		driverName    = flag.String("driver-name", "zfs-csi.0xf01d.github.io", "CSI driver name")
 		nodeID        = flag.String("node-id", os.Getenv("NODE_NAME"), "node identity, usually spec.nodeName")
 		pool          = flag.String("pool", "tank/k8s", "parent ZFS dataset for volumes; must already exist")
@@ -83,8 +83,8 @@ func main() {
 		fmt.Println(version)
 		return
 	}
-	if *mode != "controller" && *mode != "node" {
-		log.Fatal("--mode must be controller or node")
+	if *mode != "controller" && *mode != "node" && *mode != "all" {
+		log.Fatal("--mode must be controller, node, or all")
 	}
 	if *pool == "" {
 		log.Fatal("--pool is required")
@@ -142,7 +142,7 @@ func main() {
 		ctl := driver.NewController(*driverName, *pool, *topologyKey, peers, nodeNames)
 		csi.RegisterControllerServer(server, ctl)
 		log.Printf("controller: driver=%s pool=%s peers=%d nodes=%v", *driverName, *pool, len(peers), nodeNames)
-	case "node":
+	case "node", "all":
 		if *nodeID == "" {
 			log.Fatal("--node-id (or NODE_NAME) is required in node mode")
 		}
@@ -169,6 +169,11 @@ func main() {
 		node := driver.NewNode(*driverName, *nodeID, *pool, *topologyKey, *maxVolumes, b, mount.NewLinux(), rep)
 		csi.RegisterNodeServer(server, node)
 		log.Printf("node %s: driver=%s pool=%s peers=%d", *nodeID, *driverName, *pool, len(peers))
+		if *mode == "all" {
+			ctl := driver.NewController(*driverName, *pool, *topologyKey, peers, nodeNames)
+			csi.RegisterControllerServer(server, ctl)
+			log.Printf("controller (combined mode): peers=%d nodes=%v", len(peers), nodeNames)
+		}
 	}
 
 	lis, err := listen(*endpoint)

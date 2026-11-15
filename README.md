@@ -261,7 +261,7 @@ spec:
 
 | flag | default | meaning |
 |---|---|---|
-| `--mode` | required | `controller` or `node` |
+| `--mode` | required | `controller`, `node`, or `all` (combined, for csi-sanity) |
 | `--endpoint` | `unix:///csi/csi.sock` | CSI gRPC endpoint |
 | `--driver-name` | `zfs-csi.0xf01d.github.io` | CSI driver name |
 | `--node-id` | `$NODE_NAME` | node identity (node mode) |
@@ -313,7 +313,8 @@ ZFS-only tests skip unless the environment has ZFS:
 
 `csi-sanity` is **not run here** (no ZFS, and the binary is not installed).
 `hack/csi-sanity.sh` is provided and expects a running driver on a real ZFS
-node.
+node. Run the driver with `--mode=all --peer=self=127.0.0.1:9809` (and
+`--peer-listen=127.0.0.1:9809`) to expose both CSI services on one socket.
 
 ## What is not tested / not claimed
 

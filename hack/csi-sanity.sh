@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Run csi-sanity against a running driver on a real ZFS node.
 #
-# Start the driver first, for example:
-#   sudo ./bin/zfs-csi --mode=node --node-id=n1 \
+# Start the driver first in combined mode, for example:
+#   sudo ./bin/zfs-csi --mode=all --node-id=n1 \
 #       --endpoint=unix:///tmp/csi.sock --pool=tank/k8s \
-#       --peer-listen=127.0.0.1:9809 --peer=controller=127.0.0.1:9809
+#       --peer-listen=127.0.0.1:9809 --peer=self=127.0.0.1:9809
 #
 # csi-sanity exercises controller and node RPCs; it does not run Kubernetes.
 set -euo pipefail
