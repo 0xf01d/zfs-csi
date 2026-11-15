@@ -107,6 +107,11 @@ node that has the dataset and calls `POST /v1/snapshots`. The node runs
 `zfs snapshot <dataset>@vs-<uid>` and triggers replication. No data is copied
 in the snapshot call.
 
+If a volume was restored by cloning that snapshot, ZFS keeps the clone
+dependent on it. `DeleteSnapshot` then uses `zfs destroy -d`: deletion is
+deferred until the last clone is gone, so the CSI call succeeds without
+copying the snapshot first.
+
 ### Replicate
 
 For each peer:

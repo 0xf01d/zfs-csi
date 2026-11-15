@@ -120,9 +120,22 @@ func (z *ZFS) DestroySnapshot(ds, snap string) error {
 	if !naming.ValidDataset(ds) || !naming.ValidSnapshot(snap) {
 		return fmt.Errorf("invalid snapshot %s@%s", ds, snap)
 	}
-	err := z.run(nil, nil, "destroy", naming.Snapshot(ds, snap))
-	if err != nil && isMissing(err) {
+	full := naming.Snapshot(ds, snap)
+	err := z.run(nil, nil, "destroy", full)
+	if err == nil {
 		return nil
+	}
+	if isMissing(err) {
+		return nil
+	}
+	// A snapshot used as a clone origin cannot be destroyed immediately.
+	// Defer it: ZFS removes it once the last clone is gone. This keeps
+	// DeleteSnapshot successful after a PVC was restored from the snapshot.
+	msg := strings.ToLower(err.Error())
+	if strings.Contains(msg, "clone") || strings.Contains(msg, "dependent") {
+		if derr := z.run(nil, nil, "destroy", "-d", full); derr == nil {
+			return nil
+		}
 	}
 	return err
 }
