@@ -291,6 +291,8 @@ have Go, so the following are real, executed tests:
 - `pkg/replication`: full replication, incremental replication, idempotent
   re-replication, failover import of the newest snapshot, catch-up of an
   existing stale dataset, local clone, `@rep-*` snapshot creation.
+- `pkg/peer`: mutual-TLS handshake (a generated CA, server and client cert;
+  a client without a certificate is rejected).
 - `pkg/naming`: name derivation and sanitization.
 
 Run them with:
@@ -325,8 +327,9 @@ node. Run the driver with `--mode=all --peer=self=127.0.0.1:9809` (and
 - **Sidecar memory was not measured**, because the sandbox has no cluster and
   no images. See `docs/measurements.md`; the driver process RSS is measured,
   the sidecar total is an explicit unknown.
-- Mutually authenticated TLS is implemented but was not exercised with real
-  certificates here.
+- Mutually authenticated TLS is covered by a unit test that generates its own
+  CA and certificates. It was not exercised in a real cluster with a mounted
+  Secret.
 - Snapshots are ZFS crash-consistent points in time, not application-consistent
   database backups. Use `fsfreeze` or application quiescing if you need that.
 - The last snapshot on another node is a best-effort recovery point. The
