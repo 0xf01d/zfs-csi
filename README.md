@@ -1,6 +1,4 @@
-# zfs-cni
-
-> The name is a placeholder. It is a **CSI** driver, not a CNI plugin.
+# zfs-csi
 
 A CSI driver for Kubernetes where **one ZFS dataset per volume** is the unit of
 everything: provisioning, snapshots, cloning, and moving state between nodes.
